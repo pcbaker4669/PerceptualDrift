@@ -120,6 +120,7 @@ class Network:
 
         message = Message(self.nodes[source_id].ideology_score)
         # print(f"Initial message ideology: {message.ideology_score}")
+        # initial_message_ideology = message.ideology_score
 
         # Prepare CSV header
         path_length = len(path)
@@ -135,10 +136,11 @@ class Network:
             # Store the updated message ideology score as an edge attribute
             self.graph.edges[current_node_id, next_node_id]["message_ideology"] = message.ideology_score
 
-            print(f"{run_id}", f"{current_node_id}, {path_length}, {current_node.ideology_score:.5f}, "
+            print(f"{run_id}, {current_node_id}, {path_length}, {current_node.ideology_score:.5f}, "
                   f"{sensitivity}, "
                   f"{current_node.bias_multiplier:.2f}, "
-                  f"{message.ideology_score:.3f}")
+                  f"{before_score:.5f}, "
+                  f"{message.ideology_score:.5f}")
 
         # print(f"Final message ideology at target {target_id}: {message.ideology_score:.3f}")
 
@@ -147,26 +149,7 @@ sensitivity = [.5, 1.0, 1.5, 2.0 ]
 # Example Usage
 
 if __name__ == "__main__":
-  #   # Create a simple chain network
-  #   network = Network()
-  #
-  #   # Add nodes with varying bias multipliers
-  #   network.add_node(0, bias_multiplier=1.0)  # Source node
-  #   message_hops = 4
-  #
-  #   # Add intermediate nodes
-  #   for i in range(1, message_hops):
-  #       network.add_node(i, bias_multiplier=random.uniform(0.5, 2.0))  # Intermediate nodes with random bias
-  #
-  #   # Add target node
-  #   network.add_node(message_hops, bias_multiplier=1.5)  # Target node
-  #
-  #   # Propagate a message with a specific sensitivity
-  #   network.propagate_message(0, message_hops, sensitivity=1.2)
-  #
-  # # Visualize the network
-  #   network.draw_graph()
-  print("Run ID, Node ID, Path Length, Node Ideology, Sensitivity, Bias_Multiplier, Message_Ideology_Score")
+  print("Run ID, Node ID, Path Length, Node Ideology, Sensitivity, Bias_Multiplier, Init Msg Ideo Score, Msg Ideo Score")
   run_id = 0
   for num_nodes in network_chain:
       for s in sensitivity:
@@ -175,3 +158,6 @@ if __name__ == "__main__":
               network.add_node(node_id, bias_multiplier=random.uniform(0.5, 3.0))
           network.propagate_message(run_id, 0, num_nodes - 1, sensitivity=s)
           run_id += 1
+
+  # Visualize the network
+  #   network.draw_graph()

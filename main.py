@@ -1,5 +1,6 @@
 import networkx as nx
 import matplotlib.pyplot as plt
+import numpy as np
 import random
 
 # Node class
@@ -21,7 +22,7 @@ class Node:
         else:
             new_ideology = message_ideology - drift
             # Clamp ideology between 0 and 1
-        return max(0, min(1, new_ideology))
+        return np.clip(new_ideology, 0, 1)
 
 # Message class
 class Message:
@@ -109,20 +110,19 @@ class Network:
         source_id = self.last_node_added
         self.graph.add_edge(source_id, target_id)
 
-    def propagate_message(self, source_id, target_id, sensitivity=1.0):
+    def propagate_message(self, run_id, source_id, target_id, sensitivity=1.0):
         """
         Simulates message propagation from source to target, adjusting ideology along the path.
         Stores updated message ideology scores as edge attributes.
         """
         path = nx.shortest_path(self.graph, source=source_id, target=target_id)
-        print(f"Path: {path}")
+        # print(f"Path: {path}")
 
         message = Message(self.nodes[source_id].ideology_score)
-        print(f"Initial message ideology: {message.ideology_score}")
+        # print(f"Initial message ideology: {message.ideology_score}")
 
         # Prepare CSV header
-        print("Node_ID, Ideology_Score_Before, Bias_Multiplier, Message_Ideology_Score")
-
+        path_length = len(path)
         # Pass the message through each node in the path
         for i in range(len(path) - 1):
             current_node_id = path[i]
@@ -135,30 +135,43 @@ class Network:
             # Store the updated message ideology score as an edge attribute
             self.graph.edges[current_node_id, next_node_id]["message_ideology"] = message.ideology_score
 
-            print(f"{current_node_id}, {current_node.ideology_score:.3f}, {current_node.bias_multiplier:.2f}, "
+            print(f"{run_id}", f"{current_node_id}, {path_length}, {current_node.ideology_score:.5f}, "
+                  f"{sensitivity}, "
+                  f"{current_node.bias_multiplier:.2f}, "
                   f"{message.ideology_score:.3f}")
 
-        print(f"Final message ideology at target {target_id}: {message.ideology_score:.3f}")
+        # print(f"Final message ideology at target {target_id}: {message.ideology_score:.3f}")
 
-
+network_chain = [3, 5, 7, 10]
+sensitivity = [.5, 1.0, 1.5, 2.0 ]
 # Example Usage
+
 if __name__ == "__main__":
-    # Create a simple chain network
-    network = Network()
-
-    # Add nodes with varying bias multipliers
-    network.add_node(0, bias_multiplier=1.0)  # Source node
-    message_hops = 4
-
-    # Add intermediate nodes
-    for i in range(1, message_hops):
-        network.add_node(i, bias_multiplier=random.uniform(0.5, 2.0))  # Intermediate nodes with random bias
-
-    # Add target node
-    network.add_node(message_hops, bias_multiplier=1.5)  # Target node
-
-    # Propagate a message with a specific sensitivity
-    network.propagate_message(0, message_hops, sensitivity=1.2)
-
-  # Visualize the network
-    network.draw_graph()
+  #   # Create a simple chain network
+  #   network = Network()
+  #
+  #   # Add nodes with varying bias multipliers
+  #   network.add_node(0, bias_multiplier=1.0)  # Source node
+  #   message_hops = 4
+  #
+  #   # Add intermediate nodes
+  #   for i in range(1, message_hops):
+  #       network.add_node(i, bias_multiplier=random.uniform(0.5, 2.0))  # Intermediate nodes with random bias
+  #
+  #   # Add target node
+  #   network.add_node(message_hops, bias_multiplier=1.5)  # Target node
+  #
+  #   # Propagate a message with a specific sensitivity
+  #   network.propagate_message(0, message_hops, sensitivity=1.2)
+  #
+  # # Visualize the network
+  #   network.draw_graph()
+  print("Run ID, Node ID, Path Length, Node Ideology, Sensitivity, Bias_Multiplier, Message_Ideology_Score")
+  run_id = 0
+  for num_nodes in network_chain:
+      for s in sensitivity:
+          network = Network()
+          for node_id in range(num_nodes):
+              network.add_node(node_id, bias_multiplier=random.uniform(0.5, 3.0))
+          network.propagate_message(run_id, 0, num_nodes - 1, sensitivity=s)
+          run_id += 1

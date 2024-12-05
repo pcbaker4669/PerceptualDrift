@@ -1,0 +1,19 @@
+digraph "UML Diagram" {
+    rankdir=TB;
+    size="8";
+
+    Node [
+        label="Node\n----------------------\n- node_id: int\n- ideology_score: float\n- bias_multiplier: float\n----------------------\n+ process_message(message_ideology: float, sensitivity: float) -> float"
+    ];
+
+    Message [
+        label="Message\n----------------------\n- ideology_score: float\n- sensitivity: float\n----------------------\n(No methods)"
+    ];
+
+    Network [
+        label="Network\n----------------------\n- graph: networkx.DiGraph\n- nodes: dict[int, Node]\n- last_node_added: int\n----------------------\n+ add_node(node_id: int, bias_multiplier: float) -> None\n+ add_edge(source_id: int, target_id: int) -> None\n+ propagate_message(source_id: int, target_id: int, sensitivity: float) -> None\n+ draw_graph() -> None"
+    ];
+
+    Network -> Node [label="contains"];
+    Network -> Message [label="uses"];
+}

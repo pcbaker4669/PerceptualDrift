@@ -3,6 +3,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 import random
 
+random.seed(1234)
+
+from networkx.classes import number_of_nodes
+
+
 # Node class
 class Node:
     def __init__(self, node_id, ideology_score, bias_multiplier):
@@ -15,6 +20,7 @@ class Node:
         Adjusts the message ideology based on this node's ideology score, bias, and message sensitivity.
         Non-linear drift is applied to amplify or dampen the effect of ideological differences.
         """
+
         delta = abs(self.ideology_score - message_ideology)
         drift = self.bias_multiplier * sensitivity * (delta ** 2)  # Quadratic effect
         if self.ideology_score > message_ideology:
@@ -42,20 +48,20 @@ class Network:
         Node sizes are proportional to their ideology scores for clarity.
         Edge labels display message ideology scores.
         """
-        pos = nx.spring_layout(self.graph)  # Positions for all nodes
+        pos = nx.shell_layout(self.graph)
 
         # Collect node colors based on their ideology scores
         node_colors = [self.nodes[node_id].ideology_score for node_id in self.graph.nodes]
 
         # Create a matplotlib figure and axis
-        fig, ax = plt.subplots(figsize=(8, 6))
+        fig, ax = plt.subplots(figsize=(10, 6))
 
         # Draw nodes and edges
         nx.draw(
             self.graph,
             pos,
             with_labels=True,
-            node_size=500,
+            node_size=300,
             node_color=node_colors,
             cmap=plt.cm.coolwarm,
             edge_color="gray",
@@ -70,6 +76,9 @@ class Network:
         }
         nx.draw_networkx_edge_labels(self.graph, pos, edge_labels=edge_labels, ax=ax)
 
+
+        # Turn off axis ticks and labels for a cleaner look
+        ax.axis("off")
         # Add a colorbar
         sm = plt.cm.ScalarMappable(cmap=plt.cm.coolwarm)
         sm.set_array(node_colors)
@@ -120,12 +129,15 @@ class Network:
 
         message = Message(self.nodes[source_id].ideology_score)
         # print(f"Initial message ideology: {message.ideology_score}")
-        # initial_message_ideology = message.ideology_score
-
+        # use initial_message_ideology to compare change in message
+        initial_message_ideology = message.ideology_score
+        fidelity_drift = 0  # cumulative add of abs(drift), how much change
+        plausibility_drift = 0 # cumulative add of drift, if hits endpoints, we don't believe it
+        fail_flag = False  # the message became implausible and did not achieve target
         # Prepare CSV header
         path_length = len(path)
         # Pass the message through each node in the path
-        for i in range(len(path) - 1):
+        for i in range(path_length - 1):
             current_node_id = path[i]
             next_node_id = path[i + 1]
 
@@ -133,31 +145,48 @@ class Network:
             before_score = message.ideology_score
             message.ideology_score = current_node.process_message(before_score, sensitivity)
 
+            if message.ideology_score == 0 or message.ideology_score == 1:
+                fail_flag = True
+
             # Store the updated message ideology score as an edge attribute
             self.graph.edges[current_node_id, next_node_id]["message_ideology"] = message.ideology_score
 
-            print(f"{run_id}, {current_node_id}, {path_length}, {current_node.ideology_score:.5f}, "
-                  f"{sensitivity}, "
-                  f"{current_node.bias_multiplier:.2f}, "
-                  f"{before_score:.5f}, "
-                  f"{message.ideology_score:.5f}")
+            # leave off the starter node from the output
+            if i != 0:
+                node_drift = message.ideology_score - before_score
+                fidelity_drift += abs(node_drift)
+                plausibility_drift += node_drift
 
+                print(f"{run_id}, {current_node_id}, "
+                      f"{path_length}, "
+                      f"{initial_message_ideology:.5f}, "
+                      f"{current_node.ideology_score:.5f}, "
+                      f"{sensitivity}, "
+                      f"{current_node.bias_multiplier:.2f}, "
+                      f"{before_score:.5f}, "
+                      f"{message.ideology_score:.5f}, "
+                      f"{fidelity_drift:.5f}, "
+                      f"{plausibility_drift:.5}, {not fail_flag}")
+            if fail_flag:  # plausibility_drift hit and endpoint
+                break
         # print(f"Final message ideology at target {target_id}: {message.ideology_score:.3f}")
 
-network_chain = [3, 5, 7, 10]
+num_nodes_in_chain = 10
+bias_range = [(0.5, 1.0), (0.5, 2.0), (0.5, 3.0)]
 sensitivity = [.5, 1.0, 1.5, 2.0 ]
 # Example Usage
 
 if __name__ == "__main__":
-  print("Run ID, Node ID, Path Length, Node Ideology, Sensitivity, Bias_Multiplier, Init Msg Ideo Score, Msg Ideo Score")
+  print("Run ID, Node ID, Path Length, Initial Msg Ideology, Node Ideology, "
+        "Sensitivity, Bias_Multiplier, Init Msg Ideo Score, Msg Ideo Score, "
+        "fidelity_drift, plausibility_drift, Transmission Success")
   run_id = 0
-  for num_nodes in network_chain:
+  for bias in bias_range:
       for s in sensitivity:
           network = Network()
-          for node_id in range(num_nodes):
-              network.add_node(node_id, bias_multiplier=random.uniform(0.5, 3.0))
-          network.propagate_message(run_id, 0, num_nodes - 1, sensitivity=s)
+          for node_id in range(num_nodes_in_chain):
+              network.add_node(node_id, bias_multiplier=random.uniform(bias[0], bias[1]))
+          network.propagate_message(run_id, 0, num_nodes_in_chain - 1, sensitivity=s)
           run_id += 1
-
-  # Visualize the network
-  #   network.draw_graph()
+          # Visualize the network
+          network.draw_graph()

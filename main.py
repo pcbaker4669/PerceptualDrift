@@ -183,10 +183,11 @@ if __name__ == "__main__":
   run_id = 0
   for bias in bias_range:
       for s in sensitivity:
-          network = Network()
-          for node_id in range(num_nodes_in_chain):
-              network.add_node(node_id, bias_multiplier=random.uniform(bias[0], bias[1]))
-          network.propagate_message(run_id, 0, num_nodes_in_chain - 1, sensitivity=s)
-          run_id += 1
-          # Visualize the network
-          network.draw_graph()
+          for j in range(10):
+              network = Network()
+              for node_id in range(num_nodes_in_chain):
+                  network.add_node(node_id, bias_multiplier=random.uniform(bias[0], bias[1]))
+              network.propagate_message(run_id, 0, num_nodes_in_chain - 1, sensitivity=s)
+              run_id += 1
+              # Visualize the network
+              # network.draw_graph()
